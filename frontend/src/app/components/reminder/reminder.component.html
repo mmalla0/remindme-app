@@ -1,0 +1,8 @@
+
+ <div *ngIf="reminder">
+  <h2>{{ reminder.text }}</h2>
+  <p><strong>Zeit:</strong> {{ reminder.time }}</p>
+
+  <button (click)="markAsDone()" [disabled]="reminder.done">Erledigt</button>
+  <span *ngIf="reminder.done">✔️</span>
+</div>
