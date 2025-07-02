@@ -1,10 +1,7 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
-// Datenbank-Datei im Hauptprojektordner
 const dbPath = path.resolve(__dirname, '../../data/remindme.db');
-
-// Verbindung zur Datenbank herstellen
 const db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
         console.error('❌ Fehler beim Öffnen der Datenbank:', err.message);
@@ -13,43 +10,11 @@ const db = new sqlite3.Database(dbPath, (err) => {
     }
 });
 
-// Tabelle "reminders" erstellen
+// Fremdschlüssel-Unterstützung aktivieren
+db.run('PRAGMA foreign_keys = ON');
+
 db.serialize(() => {
-    db.run(`
-        CREATE TABLE IF NOT EXISTS reminders (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            text TEXT NOT NULL,
-            time TEXT NOT NULL,
-            done INTEGER DEFAULT 0
-        )
-    `, (err) => {
-        if (err) {
-            console.error('⚠️ Fehler beim Erstellen der Tabelle "reminders":', err.message);
-        } else {
-            console.log('📦 Tabelle "reminders" wurde überprüft oder erstellt.');
-        }
-    });
-
-    // Zusätzliche Spalten zur Tabelle "reminders"
-    const addColumns = [
-        { name: 'category', type: 'TEXT DEFAULT "General"' },
-        { name: 'repeat', type: 'TEXT DEFAULT "none"' },
-        { name: 'date', type: 'TEXT' }
-    ];
-
-    addColumns.forEach(col => {
-        db.run(`ALTER TABLE reminders ADD COLUMN ${col.name} ${col.type}`, (err) => {
-            if (err && !err.message.includes('duplicate column name')) {
-                console.error(`⚠️ Fehler beim Hinzufügen der Spalte "${col.name}":`, err.message);
-            } else if (!err) {
-                console.log(`✅ Spalte "${col.name}" wurde erfolgreich hinzugefügt.`);
-            } else {
-                console.log(`ℹ️ Spalte "${col.name}" existiert bereits – wird übersprungen.`);
-            }
-        });
-    });
-
-    // Neue Tabelle "categories" erstellen
+    // Tabelle "categories"
     db.run(`
         CREATE TABLE IF NOT EXISTS categories (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -62,7 +27,6 @@ db.serialize(() => {
         } else {
             console.log('📁 Tabelle "categories" wurde überprüft oder erstellt.');
 
-            // Standard-Kategorien einfügen (nur wenn sie noch nicht existieren)
             const defaultCategories = [
                 { name: 'Trinken', icon: '🥤' },
                 { name: 'Medikamente', icon: '💊' },
@@ -77,10 +41,60 @@ db.serialize(() => {
                     if (err) {
                         console.error(`⚠️ Fehler beim Einfügen der Kategorie "${cat.name}":`, err.message);
                     } else {
-                        console.log(`✅ Kategorie "${cat.name}" wurde hinzugefügt (oder war bereits vorhanden).`);
+                        console.log(`✅ Kategorie "${cat.name}" hinzugefügt oder bereits vorhanden.`);
                     }
                 });
             });
+        }
+    });
+
+    // Tabelle "repeat_rules"
+    db.run(`
+        CREATE TABLE IF NOT EXISTS repeat_rules (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE
+        )
+    `, (err) => {
+        if (err) {
+            console.error('⚠️ Fehler beim Erstellen der Tabelle "repeat_rules":', err.message);
+        } else {
+            console.log('🔁 Tabelle "repeat_rules" wurde überprüft oder erstellt.');
+
+            const defaultRepeatRules = ['none', 'daily', 'weekly'];
+
+            defaultRepeatRules.forEach(rule => {
+                db.run(`
+                    INSERT OR IGNORE INTO repeat_rules (name)
+                    VALUES (?)
+                `, [rule], (err) => {
+                    if (err) {
+                        console.error(`⚠️ Fehler beim Einfügen der Wiederholungsregel "${rule}":`, err.message);
+                    } else {
+                        console.log(`✅ Wiederholungsregel "${rule}" hinzugefügt oder bereits vorhanden.`);
+                    }
+                });
+            });
+        }
+    });
+
+    // Tabelle "reminders" mit Beziehungen zu categories + repeat_rules
+    db.run(`
+        CREATE TABLE IF NOT EXISTS reminders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            text TEXT NOT NULL,
+            time TEXT NOT NULL,
+            done INTEGER DEFAULT 0,
+            date TEXT,
+            category_id INTEGER,
+            repeat_rule_id INTEGER DEFAULT 1, -- ID 1 = "none"
+            FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL ON UPDATE CASCADE,
+            FOREIGN KEY (repeat_rule_id) REFERENCES repeat_rules(id) ON DELETE SET DEFAULT ON UPDATE CASCADE
+        )
+    `, (err) => {
+        if (err) {
+            console.error('⚠️ Fehler beim Erstellen der Tabelle "reminders":', err.message);
+        } else {
+            console.log('📦 Tabelle "reminders" wurde überprüft oder erstellt.');
         }
     });
 });

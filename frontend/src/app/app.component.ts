@@ -1,11 +1,12 @@
 import { Component, OnInit } from '@angular/core';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
+import { ReminderComponent } from './components/reminder/reminder.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [HttpClientModule, CommonModule], // <--- WICHTIG!
+  imports: [HttpClientModule, CommonModule, ReminderComponent], // <--- WICHTIG!
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
 })
