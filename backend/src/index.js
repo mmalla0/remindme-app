@@ -18,6 +18,8 @@ app.use('/api/reminders', remindersRouter);
 const categoriesRouter = require('./routes/categories');
 app.use('/api/categories', categoriesRouter);
 
+const waterRouter = require('./routes/water');
+app.use('/api/water', waterRouter);
 
 // Test-/Status-Route
 app.get('/api/message', (req, res) => {
