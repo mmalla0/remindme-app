@@ -27,4 +27,105 @@ router.get('/next', (req, res) => {
     });
 });
 
+// GET /api/reminders
+router.get('/', (req, res) => {
+    db.all(`
+        SELECT 
+            r.id, r.text, r.time, r.date, r.done,
+            c.name AS category,
+            rr.name AS repeat_rule
+        FROM reminders r
+        LEFT JOIN categories c ON r.category_id = c.id
+        LEFT JOIN repeat_rules rr ON r.repeat_rule_id = rr.id
+        ORDER BY r.time ASC
+    `, [], (err, rows) => {
+        if (err) {
+            console.error('❌ Fehler beim Abrufen der Reminder:', err.message);
+            return res.status(500).json({ error: err.message });
+        }
+
+        res.json(rows);
+    });
+});
+
+// POST /api/reminders
+router.post('/', (req, res) => {
+    const { text, time, date, category_id, repeat_rule_id } = req.body;
+
+    if (!text || !time) {
+        return res.status(400).json({ error: 'Text und Zeit sind erforderlich.' });
+    }
+
+    const sql = `
+        INSERT INTO reminders (text, time, date, category_id, repeat_rule_id)
+        VALUES (?, ?, ?, ?, ?)
+    `;
+
+    const values = [
+        text,
+        time,
+        date || null,
+        category_id || null,
+        repeat_rule_id || 1  // Standard: "none"
+    ];
+
+    db.run(sql, values, function (err) {
+        if (err) {
+            console.error('❌ Fehler beim Einfügen des Reminders:', err.message);
+            return res.status(500).json({ error: err.message });
+        }
+
+        res.status(201).json({ id: this.lastID });
+    });
+});
+
+
+// PUT /api/reminders/:id
+router.put('/:id', (req, res) => {
+    const { text, time, date, category_id, repeat_rule_id } = req.body;
+    const { id } = req.params;
+
+    if (!text || !time) {
+        return res.status(400).json({ error: 'Text und Zeit sind erforderlich.' });
+    }
+
+    const sql = `
+        UPDATE reminders
+        SET text = ?, time = ?, date = ?, category_id = ?, repeat_rule_id = ?
+        WHERE id = ?
+    `;
+    const values = [text, time, date || null, category_id || null, repeat_rule_id || 1, id];
+
+    db.run(sql, values, function (err) {
+        if (err) {
+            console.error('❌ Fehler beim Aktualisieren des Reminders:', err.message);
+            return res.status(500).json({ error: err.message });
+        }
+
+        if (this.changes === 0) {
+            return res.status(404).json({ message: 'Reminder nicht gefunden.' });
+        }
+
+        res.json({ message: 'Reminder aktualisiert.' });
+    });
+});
+
+// DELETE /api/reminders/:id
+router.delete('/:id', (req, res) => {
+    const { id } = req.params;
+
+    db.run(`DELETE FROM reminders WHERE id = ?`, [id], function (err) {
+        if (err) {
+            console.error('❌ Fehler beim Löschen des Reminders:', err.message);
+            return res.status(500).json({ error: err.message });
+        }
+
+        if (this.changes === 0) {
+            return res.status(404).json({ message: 'Reminder nicht gefunden.' });
+        }
+
+        res.json({ message: 'Reminder gelöscht.' });
+    });
+});
+
 module.exports = router;
