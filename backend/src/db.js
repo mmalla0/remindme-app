@@ -99,4 +99,20 @@ db.serialize(() => {
     });
 });
 
+// Tabelle für Wassertrinken (pro Tag)
+db.run(`
+    CREATE TABLE IF NOT EXISTS water_intake (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date TEXT NOT NULL,
+        target_amount INTEGER NOT NULL,
+        current_amount INTEGER DEFAULT 0
+    )
+`, (err) => {
+    if (err) {
+        console.error('⚠️ Fehler beim Erstellen der Tabelle "water_intake":', err.message);
+    } else {
+        console.log('💧 Tabelle "water_intake" wurde überprüft oder erstellt.');
+    }
+});
+
 module.exports = db;
