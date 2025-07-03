@@ -44,3 +44,10 @@ typings/
 # Systemdateien
 .DS_Store
 Thumbs.db
+
+# Datenbank ignorieren
+data/*.db
+*.db
+
+# JetBrains IDE
+.idea/
