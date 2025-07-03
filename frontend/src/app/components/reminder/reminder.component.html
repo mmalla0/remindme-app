@@ -1,53 +1,8 @@
-<div class="container" [class.evening]="isEvening">
-  <h1>Hallo Anna 👋</h1>
-  <div class="clock">🕒 {{ clockTime }}</div>
 
-  <div *ngIf="showSuccess" class="success-message" role="status">
-    🎉 Gut gemacht, Anna! Du hast deine Erinnerung erledigt.
-  </div>
+<div *ngIf="reminder">
+  <h2>{{ reminder.text }}</h2>
+  <p><strong>Zeit:</strong> {{ reminder.time }}</p>
 
-  <section *ngIf="reminder && !reminder.done" class="reminder-box">
-    <h2>Nächste Erinnerung</h2>
-    <p class="reminder-text">🔔 {{ reminder.text }}</p>
-    <button (click)="markAsDone()">✅ Erledigt</button>
-  </section>
-
-  <section class="progress">
-    <h2>📊 Tagesfortschritt</h2>
-    <p>{{ completedTasks }} von {{ totalTasks }} erledigt</p>
-    <div class="bar"><div class="bar-fill" [style.width.%]="progressPercent"></div></div>
-  </section>
-
-  <section class="schedule">
-    <h2>📅 Dein Tagesplan</h2>
-    <table>
-      <thead><tr><th>Zeit</th><th>Aufgabe</th><th>Status</th></tr></thead>
-      <tbody>
-      <tr *ngFor="let item of schedule">
-        <td>{{ item.time }}</td>
-        <td>{{ item.task }}</td>
-        <td>{{ item.done ? '✔️' : '⏳' }}</td>
-      </tr>
-      </tbody>
-    </table>
-  </section>
-
-  <section class="form">
-    <h2>➕ Neue Erinnerung</h2>
-    <form (ngSubmit)="saveReminder()">
-      <label for="task">Standard-Aufgabe</label>
-      <select id="task" [(ngModel)]="newReminder.task" name="task">
-        <option value="">Wähle eine Aufgabe</option>
-        <option *ngFor="let t of taskOptions" [value]="t">{{ t }}</option>
-      </select>
-
-      <label for="custom">Oder eigene Aufgabe</label>
-      <input id="custom" type="text" [(ngModel)]="newReminder.custom" name="custom" placeholder="z. B. Katze füttern">
-
-      <label for="time">Uhrzeit</label>
-      <input id="time" type="time" [(ngModel)]="newReminder.time" name="time" required>
-
-      <button type="submit">💾 Speichern</button>
-    </form>
-  </section>
+  <button (click)="markAsDone()" [disabled]="reminder.done">Erledigt</button>
+  <span *ngIf="reminder.done">✔️</span>
 </div>
