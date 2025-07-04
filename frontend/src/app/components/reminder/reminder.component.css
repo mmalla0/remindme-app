@@ -1,0 +1,21 @@
+.card {
+  border-radius: 1rem;
+}
+
+.card-title {
+  font-weight: 600;
+}
+
+.btn-warning {
+  background-color: #f79433;
+  border-color: #f79433;
+  color: white;
+}
+
+.btn-warning:hover {
+  background-color: #e9821c;
+}
+
+.table td, .table th {
+  vertical-align: middle;
+}

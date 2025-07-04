@@ -1,8 +1,94 @@
+<hr />
+<h2>🔧 Neues Reminder-Mockup </h2>
 
-<div *ngIf="reminder">
-  <h2>{{ reminder.text }}</h2>
-  <p><strong>Zeit:</strong> {{ reminder.time }}</p>
+<div class="container py-4">
+  <div class="row mb-4">
+    <div class="col text-center">
+      <h2>👋 Willkommen, {{ userName }}</h2>
+      <p class="text-muted">Your reminder overview for today</p>
+      <p><strong>Last reminder:</strong> {{ lastReminder.time }} – {{ lastReminder.task }}</p>
+    </div>
+  </div>
 
-  <button (click)="markAsDone()" [disabled]="reminder.done">Erledigt</button>
-  <span *ngIf="reminder.done">✔️</span>
+  <div class="row g-4">
+    <div class="col-md-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-body text-center">
+          <h5 class="card-title">💊 Medication</h5>
+          <p>Anna, please take your medication.</p>
+          <button class="btn btn-warning w-100" (click)="confirmDone('Medication')">Done</button>
+          <p class="text-muted small mt-2">Reminder played at 08:30</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-body text-center">
+          <h5 class="card-title">🚰 Drink</h5>
+          <p>Time for a glass of water, {{ userName }}</p>
+          <button class="btn btn-warning w-100" (click)="confirmDone('Drink')">Done</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title text-center">🗓️ Daily Schedule</h5>
+          <table class="table table-sm table-bordered text-center mt-3">
+            <thead class="table-light">
+            <tr><th>Time</th><th>Task</th></tr>
+            </thead>
+            <tbody>
+            <tr *ngFor="let entry of dailySchedule">
+              <td>{{ entry.time }}</td>
+              <td>{{ entry.icon }} {{ entry.task }}</td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mt-4">
+    <div class="col-md-6 offset-md-3">
+      <div class="card shadow-sm">
+        <div class="card-body text-center">
+          <h5 class="card-title">⏰ Set Reminder</h5>
+          <div class="mb-3">
+            <select class="form-select" [(ngModel)]="selectedTask">
+              <option value="" disabled selected>Select task</option>
+              <option value="Medication">💊 Medication</option>
+              <option value="Drink">🚰 Drink</option>
+              <option value="Daily Task">📝 Daily Task</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <input type="time" class="form-control" [(ngModel)]="selectedTime" />
+          </div>
+          <button class="btn btn-primary w-100" (click)="saveReminder()">Save Reminder</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
+<!-- 🔊 Sprach-Modal -->
+<div class="modal fade show d-block" tabindex="-1" role="dialog" *ngIf="showSpeechModal" style="background-color: rgba(0, 0, 0, 0.5);">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content text-center">
+      <div class="modal-header">
+        <h5 class="modal-title">🔊 Sprachausgabe</h5>
+        <button type="button" class="btn-close" aria-label="Close" (click)="closeSpeechModal()"></button>
+      </div>
+      <div class="modal-body">
+        <p class="fs-5">{{ speechText }}</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary w-100" (click)="closeSpeechModal()">Schließen</button>
+      </div>
+    </div>
+  </div>
+</div>
+

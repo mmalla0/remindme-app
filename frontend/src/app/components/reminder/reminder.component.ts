@@ -2,11 +2,12 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { SpeechService } from '../../services/speech.service';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-reminder',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   providers: [SpeechService],
   templateUrl: './reminder.component.html',
   styleUrls: ['./reminder.component.css']
@@ -94,4 +95,36 @@ export class ReminderComponent implements OnInit, OnDestroy {
     if (this.speakInterval) clearInterval(this.speakInterval);
     // Optional: Backend call zum Speichern, dass erledigt wurde
   }
+  userName = 'Anna';
+  lastReminder = { time: '08:30', task: 'Took medication' };
+  dailySchedule = [
+    { time: '08:30', task: 'Medication', icon: '💊' },
+    { time: '10:00', task: 'Walk', icon: '🚶' },
+    { time: '17:30', task: 'Lunch', icon: '🍽️' }
+  ];
+  selectedTask = '';
+  selectedTime = '08:30';
+
+  saveReminder() {
+    alert(`Saved reminder: ${this.selectedTask} at ${this.selectedTime}`);
+  }
+
+  confirmDone(task: string) {
+    alert(`${task} marked as done!`);
+  }
+  showSpeechModal = false;
+  speechText = '';
+
+  openSpeechModal(text: string) {
+    this.speechText = text;
+    this.showSpeechModal = true;
+    if (document.visibilityState === 'visible') {
+      this.speechService.speak(`Erinnerung: ${text}`);
+    }
+  }
+
+  closeSpeechModal() {
+    this.showSpeechModal = false;
+  }
+
 }
