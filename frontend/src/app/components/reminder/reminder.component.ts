@@ -21,13 +21,13 @@ export class ReminderComponent implements OnInit, OnDestroy {
 
   constructor(
     private http: HttpClient,
-    public speechService: SpeechService // für evtl. Test-Button im Template
+    public speechService: SpeechService
   ) {}
 
   ngOnInit(): void {
-    this.checkReminder(); // Sofort einmalig beim Start
+    this.checkReminder();
+    this.setupWaterTracking();
 
-    // Synchronisierung auf die nächste volle Minute
     const now = new Date();
     const msToNextMinute = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
 
@@ -35,12 +35,11 @@ export class ReminderComponent implements OnInit, OnDestroy {
       this.checkReminder();
       this.minuteInterval = setInterval(() => {
         this.checkReminder();
-      }, 60_000); // ab jetzt immer jede volle Minute
+      }, 60_000);
     }, msToNextMinute);
   }
 
   ngOnDestroy(): void {
-    // Immer aufräumen!
     if (this.speakInterval) clearInterval(this.speakInterval);
     if (this.minuteInterval) clearInterval(this.minuteInterval);
   }
@@ -49,52 +48,44 @@ export class ReminderComponent implements OnInit, OnDestroy {
     this.http.get<any>('/api/reminders/next').subscribe({
       next: (data) => {
         const newKey = `${data.text}-${data.time}`;
-        console.log('📥 Reminder vom Server:', data);
-        // Nur bei NEUEM Reminder reagieren:
         if (newKey !== this.lastSpokenKey) {
           this.reminder = { ...data, done: false };
           this.lastSpokenKey = newKey;
           this.spokenCount = 0;
           this.startSpeaking();
         }
-        // Sonst Reminder einfach anzeigen lassen
       },
       error: (err) => {
         console.error('❌ Fehler beim Abrufen des Reminders:', err);
-        // Reminder bleibt ggf. stehen (optional kannst du nach X Minuten ausblenden)
       }
     });
   }
 
   startSpeaking() {
-    // Vorherige Wiederholungen abbrechen
     if (this.speakInterval) clearInterval(this.speakInterval);
 
-    // Sofortiges Vorlesen, nur wenn Tab sichtbar und nicht erledigt
-    if (document.visibilityState === 'visible' && !this.reminder.done) {
+    if (document.visibilityState === 'visible' && !this.reminder?.done) {
       this.speechService.speak(`Erinnerung: ${this.reminder.text}`);
     }
     this.spokenCount = 1;
 
-    // Bis zu 2 weitere Wiederholungen (insgesamt 3) im Abstand von 1 Minute
     this.speakInterval = setInterval(() => {
-      if (this.spokenCount < 3 && !this.reminder.done) {
+      if (this.spokenCount < 3 && !this.reminder?.done) {
         if (document.visibilityState === 'visible') {
           this.speechService.speak(`Erinnerung: ${this.reminder.text}`);
         }
         this.spokenCount++;
       } else {
-        clearInterval(this.speakInterval); // Nach 3x stoppen oder wenn erledigt
+        clearInterval(this.speakInterval);
       }
     }, 60_000);
   }
 
-  // Kannst du an deinen "Erledigt"-Button binden:
   markAsDone() {
     this.reminder.done = true;
     if (this.speakInterval) clearInterval(this.speakInterval);
-    // Optional: Backend call zum Speichern, dass erledigt wurde
   }
+
   userName = 'Anna';
   lastReminder = { time: '08:30', task: 'Took medication' };
   dailySchedule = [
@@ -112,6 +103,7 @@ export class ReminderComponent implements OnInit, OnDestroy {
   confirmDone(task: string) {
     alert(`${task} marked as done!`);
   }
+
   showSpeechModal = false;
   speechText = '';
 
@@ -127,4 +119,64 @@ export class ReminderComponent implements OnInit, OnDestroy {
     this.showSpeechModal = false;
   }
 
+  // 💧 Wasser-Tracking
+  waterGoal: number | null = null;
+  drunkWater = 0;
+  waterId: number | null = null;
+
+  setupWaterTracking() {
+    const today = new Date().toISOString().split('T')[0];
+    this.http.get<any>(`/api/water/${today}`).subscribe({
+      next: (data) => {
+        this.waterId = data.id;
+        this.waterGoal = data.target_amount;
+        this.drunkWater = data.current_amount;
+      },
+      error: (err) => {
+        if (err.status === 404) {
+          // Kein Eintrag: manuelle Eingabe erlauben
+          this.waterId = null;
+          this.waterGoal = null;
+          this.drunkWater = 0;
+        } else {
+          console.error('❌ Fehler beim Wasserabruf:', err);
+        }
+      }
+    });
+  }
+
+  createTodayWater() {
+    const today = new Date().toISOString().split('T')[0];
+
+    if (!this.waterGoal || this.waterGoal < 1 || this.waterGoal > 20) {
+      alert('Bitte gib ein Ziel zwischen 1 und 20 Gläsern ein.');
+      return;
+    }
+
+    this.http.post<any>('http://localhost:3000/api/water', {
+      date: today,
+      target_amount: this.waterGoal
+    }).subscribe({
+      next: (data) => {
+        this.waterId = data.id;
+        this.drunkWater = 0;
+      },
+      error: (err) => {
+        console.error('❌ Fehler beim Erstellen des Wasserziels:', err);
+      }
+    });
+  }
+
+  drinkWater() {
+    if (!this.waterId || this.drunkWater >= (this.waterGoal || 0)) return;
+
+    this.http.put(`http://localhost:3000/api/water/${this.waterId}/add`, {}).subscribe({
+      next: () => {
+        this.drunkWater++;
+      },
+      error: (err) => {
+        console.error('❌ Fehler beim Hinzufügen eines Glases:', err);
+      }
+    });
+  }
 }

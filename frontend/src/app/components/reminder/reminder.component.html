@@ -11,34 +11,74 @@
   </div>
 
   <div class="row g-4">
+    <!-- 💊 Medication -->
     <div class="col-md-4">
       <div class="card shadow-sm h-100">
         <div class="card-body text-center">
           <h5 class="card-title">💊 Medication</h5>
           <p>Anna, please take your medication.</p>
           <button class="btn btn-warning w-100" (click)="confirmDone('Medication')">Done</button>
-          <p class="text-muted small mt-2">Reminder played at 08:30</p>
+          <p class="text-muted small mt-2">Reminder played at {{ lastReminder.time }}</p>
         </div>
       </div>
     </div>
 
+    <!-- 🚰 Wasser trinken -->
     <div class="col-md-4">
       <div class="card shadow-sm h-100">
         <div class="card-body text-center">
-          <h5 class="card-title">🚰 Drink</h5>
-          <p>Time for a glass of water, {{ userName }}</p>
-          <button class="btn btn-warning w-100" (click)="confirmDone('Drink')">Done</button>
+          <h5 class="card-title">🚰 Wasser trinken</h5>
+
+          <!-- Ziel setzen -->
+          <div *ngIf="!waterId">
+            <label for="goalInput" class="form-label">Wie viele Gläser möchtest du heute trinken?</label>
+            <input
+              id="goalInput"
+              type="number"
+              class="form-control mb-2"
+              [(ngModel)]="waterGoal"
+              min="1"
+              max="20"
+              placeholder="z. B. 8 Gläser"
+            />
+            <button class="btn btn-primary w-100" (click)="createTodayWater()">Ziel setzen</button>
+          </div>
+
+          <!-- Fortschritt -->
+          <div *ngIf="waterId">
+            <p class="mb-1">🥤 {{ drunkWater }} / {{ waterGoal }} Gläser getrunken</p>
+            <div class="progress mb-3" style="height: 25px;">
+              <div
+                class="progress-bar bg-info"
+                role="progressbar"
+                [style.width.%]="(drunkWater / waterGoal!) * 100"
+              >
+                {{ ((drunkWater / waterGoal!) * 100) | number: '1.0-0' }}%
+              </div>
+            </div>
+            <button
+              class="btn btn-success w-100"
+              [disabled]="drunkWater >= waterGoal!"
+              (click)="drinkWater()"
+            >
+              + 1 Glas getrunken
+            </button>
+          </div>
         </div>
       </div>
     </div>
 
+    <!-- 🗓️ Daily Schedule -->
     <div class="col-md-4">
       <div class="card shadow-sm h-100">
         <div class="card-body">
           <h5 class="card-title text-center">🗓️ Daily Schedule</h5>
           <table class="table table-sm table-bordered text-center mt-3">
             <thead class="table-light">
-            <tr><th>Time</th><th>Task</th></tr>
+            <tr>
+              <th>Time</th>
+              <th>Task</th>
+            </tr>
             </thead>
             <tbody>
             <tr *ngFor="let entry of dailySchedule">
@@ -52,6 +92,7 @@
     </div>
   </div>
 
+  <!-- ⏰ Reminder-Formular -->
   <div class="row mt-4">
     <div class="col-md-6 offset-md-3">
       <div class="card shadow-sm">
@@ -74,13 +115,25 @@
     </div>
   </div>
 </div>
+
 <!-- 🔊 Sprach-Modal -->
-<div class="modal fade show d-block" tabindex="-1" role="dialog" *ngIf="showSpeechModal" style="background-color: rgba(0, 0, 0, 0.5);">
+<div
+  class="modal fade show d-block"
+  tabindex="-1"
+  role="dialog"
+  *ngIf="showSpeechModal"
+  style="background-color: rgba(0, 0, 0, 0.5);"
+>
   <div class="modal-dialog modal-dialog-centered" role="document">
     <div class="modal-content text-center">
       <div class="modal-header">
         <h5 class="modal-title">🔊 Sprachausgabe</h5>
-        <button type="button" class="btn-close" aria-label="Close" (click)="closeSpeechModal()"></button>
+        <button
+          type="button"
+          class="btn-close"
+          aria-label="Close"
+          (click)="closeSpeechModal()"
+        ></button>
       </div>
       <div class="modal-body">
         <p class="fs-5">{{ speechText }}</p>
@@ -91,4 +144,3 @@
     </div>
   </div>
 </div>
-
