@@ -1,30 +1,75 @@
+:host {
+  display: block;
+  background-color: #f6f9f6;
+  background-image: linear-gradient(to bottom right, #f6f9f6, #e8f5e9);
+  min-height: 100vh;
+  padding: 2rem;
+  font-family: 'Segoe UI', sans-serif;
+}
+
 .card {
   border-radius: 1rem;
+  font-size: 1.2rem;
 }
 
 .card-title {
-  font-weight: 600;
+  font-weight: bold;
+  color: #2c3e50;
 }
 
-.btn-warning {
-  background-color: #f79433;
-  border-color: #f79433;
-  color: white;
+.btn {
+  font-size: 1.2rem;
+  padding: 0.7rem 1rem;
 }
 
-.btn-warning:hover {
-  background-color: #e9821c;
+.btn-outline-primary,
+.btn-outline-danger {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  font-size: 1.1rem;
+  border-width: 2px;
 }
 
-.table td, .table th {
-  vertical-align: middle;
-}
-
-.progress {
-  background-color: #e9ecef;
-  border-radius: 10px;
+.custom-row:hover {
+  background-color: #f9f9f9;
 }
 
 .progress-bar {
   font-weight: bold;
+  font-size: 1rem;
 }
+
+select,
+input[type="time"] {
+  font-size: 1.2rem;
+  padding: 0.7rem;
+}
+/* 🔄 Bessere Struktur und saubere Kanten */
+table {
+  border-collapse: collapse; /* 🔄 */
+}
+
+th, td {
+  border: 1px solid #dee2e6; /* 🔄 */
+  padding: 0.6rem;           /* 🔄 */
+  vertical-align: middle;    /* 🔄 */
+  background-color: #fff;
+}
+
+/* 🔄 Kopfzeile visuell abheben */
+table thead th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+}
+
+/* 🔄 Optional: alternierende Zeilenfarben */
+table.table-striped tbody tr:nth-of-type(odd) {
+  background-color: #f2f2f2;
+}
+
+/* 🔄 Icon-Zelle leicht verkleinert */
+td span[style*="font-size"] {
+  line-height: 1;
+}
+

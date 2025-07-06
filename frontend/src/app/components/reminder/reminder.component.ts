@@ -18,6 +18,9 @@ export class ReminderComponent implements OnInit, OnDestroy {
   spokenCount = 0;
   speakInterval: any = null;
   minuteInterval: any = null;
+  editIndex: number | null = null;
+  editedEntry: any = null;
+
 
   constructor(
     private http: HttpClient,
@@ -95,9 +98,24 @@ export class ReminderComponent implements OnInit, OnDestroy {
   ];
   selectedTask = '';
   selectedTime = '08:30';
+  customTaskText = '';
+  showCustomTaskField = false;
+
+  onTaskChange(event: Event) {
+    const value = (event.target as HTMLSelectElement).value;
+    this.showCustomTaskField = value === 'custom';
+    this.selectedTask = value;
+  }
 
   saveReminder() {
-    alert(`Saved reminder: ${this.selectedTask} at ${this.selectedTime}`);
+    const task = this.selectedTask === 'custom' ? this.customTaskText : this.selectedTask;
+
+    if (!task || !this.selectedTime) {
+      alert('Bitte Aufgabe und Uhrzeit eingeben.');
+      return;
+    }
+
+    alert(`Erinnerung gespeichert: ${task} um ${this.selectedTime}`);
   }
 
   confirmDone(task: string) {
@@ -179,4 +197,29 @@ export class ReminderComponent implements OnInit, OnDestroy {
       }
     });
   }
+  // 🟩 Startet Bearbeitung für ausgewählten Eintrag
+  editSchedule(index: number) {
+    this.editIndex = index;
+    this.editedEntry = { ...this.dailySchedule[index] };
+  }
+
+// 🟩 Speichert Änderungen
+  saveSchedule(index: number) {
+    this.dailySchedule[index] = { ...this.editedEntry };
+    this.cancelEdit();
+  }
+
+// 🟩 Abbricht Bearbeiten
+  cancelEdit() {
+    this.editIndex = null;
+    this.editedEntry = null;
+  }
+
+// 🟩 Löscht einen Eintrag
+  deleteSchedule(index: number) {
+    this.dailySchedule.splice(index, 1);
+    if (this.editIndex === index) this.cancelEdit();
+  }
+
+  protected readonly HTMLSelectElement = HTMLSelectElement;
 }
