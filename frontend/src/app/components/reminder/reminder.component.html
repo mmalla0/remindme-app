@@ -1,35 +1,30 @@
-<hr />
-<h2 class="text-center display-5 mb-4">🧠 ReminderMe Übersicht</h2>
+<div class="container-lg mt-4">
+  <h2 class="text-center mb-4 display-5">
+    🧠 ReminderMe Übersicht
+  </h2>
 
-<div class="container-lg">
-  <!-- GRID: 3 gleich hohe Boxen nebeneinander -->
   <div class="row g-4 justify-content-center">
-    <!-- 💊 Medication -->
+    <!-- 💊 Medikament -->
     <div class="col-md-4">
       <div class="card h-100 text-center p-3 shadow-sm">
         <h5 class="card-title fs-3 mb-3">💊 Medikament</h5>
         <p class="fs-5">Anna, bitte nimm dein Medikament.</p>
         <button class="btn btn-warning btn-lg w-100 mb-2" (click)="confirmDone('Medication')">✅ Erledigt</button>
-        <small class="text-muted">Erinnerung um {{ lastReminder.time }}</small>
         <button class="btn btn-outline-secondary mt-3 w-100" (click)="openSpeechModal('Bitte nimm dein Medikament')">
           🔊 Vorlesen
         </button>
       </div>
     </div>
 
-    <!-- 🚰 Wasser -->
+    <!-- 🚰 Wasser-Tracking -->
     <div class="col-md-4">
       <div class="card h-100 text-center p-3 shadow-sm">
         <h5 class="card-title fs-3 mb-3">🚰 Wasser trinken</h5>
-
-        <!-- Ziel setzen -->
         <div *ngIf="!waterId">
           <label class="form-label">Wie viele Gläser möchtest du heute trinken?</label>
           <input type="number" class="form-control mb-2" [(ngModel)]="waterGoal" min="1" max="20" placeholder="z. B. 8 Gläser" />
           <button class="btn btn-primary w-100" (click)="createTodayWater()">Ziel setzen</button>
         </div>
-
-        <!-- Fortschritt -->
         <div *ngIf="waterId">
           <p class="mb-1 fs-5">🥤 {{ drunkWater }} / {{ waterGoal }} Gläser getrunken</p>
           <div class="progress mb-3" style="height: 36px;">
@@ -48,135 +43,124 @@
     <div class="col-md-4">
       <div class="card h-100 p-3 shadow-sm">
         <h5 class="card-title text-center fs-3 mb-3">🗓️ Tagesplan</h5>
-
-        <!-- ✅ Tabelle mit konsistenter Zeilenstruktur -->
         <table class="table table-bordered table-hover align-middle text-center">
           <thead class="table-light">
-          <tr>
-            <th class="text-center">🕒 Zeit</th>
-            <th class="text-center">📋 Aufgabe</th>
-            <th class="text-center">⚙️</th>
-          </tr>
+            <tr>
+              <th class="text-center">🕒 Zeit</th>
+              <th class="text-center">📋 Aufgabe</th>
+              <th class="text-center">⚙️</th>
+            </tr>
           </thead>
           <tbody>
-          <tr *ngFor="let entry of dailySchedule; let i = index">
-            <!-- ✅ Anzeige-Zeit oder Eingabefeld -->
-            <td *ngIf="editIndex !== i; else editTime">
-              {{ entry.time }}
-            </td>
-
-            <!-- ✅ Anzeige-Aufgabe oder Eingabefelder -->
-            <td *ngIf="editIndex !== i; else editTask">
-              <div class="d-flex align-items-center justify-content-center gap-2">
-                <span style="font-size: 1.3rem;">{{ entry.icon }}</span>
-                <span class="fw-semibold">{{ entry.task }}</span>
-              </div>
-            </td>
-
-            <!-- ✅ Buttons: Anzeigen oder Speichern/Abbrechen -->
-            <td *ngIf="editIndex !== i; else editButtons">
-              <div class="d-flex justify-content-center gap-2">
-                <button class="btn btn-outline-primary btn-sm rounded-circle" (click)="editSchedule(i)">✏️</button>
-                <button class="btn btn-outline-danger btn-sm rounded-circle" (click)="deleteSchedule(i)">🗑️</button>
-              </div>
-            </td>
-
-            <!-- 🧩 Eingabefeld für Zeit -->
-            <ng-template #editTime>
-              <td>
-                <input type="time" class="form-control" [(ngModel)]="editedEntry.time" />
+            <tr *ngFor="let entry of dailySchedule; let i = index">
+              <!-- Bearbeiten -->
+              <ng-container *ngIf="editIndex === i; else showRow">
+                <td>
+                  <input type="time" class="form-control" [(ngModel)]="editedEntry.time" />
+                </td>
+                <td>
+                  <div class="d-flex flex-column gap-2 align-items-center">
+                    <input type="text" class="form-control mb-1" [(ngModel)]="editedEntry.task" placeholder="Aufgabe" />
+                    <input type="text" class="form-control" maxlength="2" [(ngModel)]="editedEntry.icon" placeholder="Icon" />
+                  </div>
+                </td>
+                <td>
+                  <button class="btn btn-success btn-sm me-1" (click)="saveSchedule(i)">💾</button>
+                  <button class="btn btn-secondary btn-sm" (click)="cancelEdit()">✖️</button>
+                </td>
+              </ng-container>
+              <!-- Anzeige -->
+              <ng-template #showRow>
+                <td>{{ entry.time }}</td>
+                <td>
+                  <span style="font-size: 1.5rem;">{{ entry.icon }}</span>
+                  <span class="fw-semibold d-block">{{ entry.task }}</span>
+                </td>
+                <td>
+                  <button class="btn btn-outline-primary btn-sm rounded-circle me-1" (click)="editSchedule(i)">✏️</button>
+                  <button class="btn btn-outline-danger btn-sm rounded-circle" (click)="deleteSchedule(i)">🗑️</button>
+                </td>
+              </ng-template>
+            </tr>
+            <tr *ngIf="dailySchedule.length === 0">
+              <td colspan="3" class="text-secondary text-center py-4">
+                Keine Aufgaben für heute eingetragen.
               </td>
-            </ng-template>
-
-            <!-- 🧩 Eingabefeld für Aufgabe + Icon -->
-            <ng-template #editTask>
-              <td>
-                <input type="text" class="form-control mb-1" [(ngModel)]="editedEntry.task" placeholder="Aufgabe" />
-                <input type="text" class="form-control" maxlength="2" [(ngModel)]="editedEntry.icon" placeholder="Icon" />
-              </td>
-            </ng-template>
-
-            <!-- 🧩 Speichern & Abbrechen -->
-            <ng-template #editButtons>
-              <td class="text-center">
-                <button class="btn btn-success btn-sm me-1" (click)="saveSchedule(i)">💾</button>
-                <button class="btn btn-secondary btn-sm" (click)="cancelEdit()">✖️</button>
-              </td>
-            </ng-template>
-          </tr>
+            </tr>
           </tbody>
         </table>
       </div>
     </div>
-
-
-  </div><!-- ⏰ Erinnerung erstellen -->
-<div class="row mt-4 justify-content-center">
-  <div class="col-md-6">
-    <div class="card shadow-sm p-4">
-      <h5 class="card-title text-center fs-3 mb-3">⏰ Erinnerung erstellen</h5>
-
-      <div class="mb-3">
-        <label class="form-label" for="taskSelect">Aufgabe</label>
-        <select
-          id="taskSelect"
-          class="form-select"
-          [(ngModel)]="selectedTask"
-          (change)="onTaskChange($event)"
-        >
-          <option value="" disabled selected>Bitte wählen</option>
-          <option value="Medication">💊 Medikament</option>
-          <option value="Drink">🚰 Wasser trinken</option>
-          <option value="custom">📝 Eigene Aufgabe eingeben</option>
-        </select>
-      </div>
-
-      <!-- 🔽 Eigener Text bei Auswahl von "custom" -->
-      <div *ngIf="showCustomTaskField" class="mb-3">
-        <label class="form-label" for="customTaskInput">Eigene Aufgabe</label>
-        <input
-          id="customTaskInput"
-          type="text"
-          class="form-control"
-          placeholder="z. B. Blutdruck messen"
-          [(ngModel)]="customTaskText"
-        />
-      </div>
-
-      <div class="mb-3">
-        <label class="form-label" for="timeInput">Uhrzeit</label>
-        <input
-          id="timeInput"
-          type="time"
-          class="form-control"
-          [(ngModel)]="selectedTime"
-        />
-      </div>
-
-      <button class="btn btn-primary w-100" (click)="saveReminder()">
-        Erinnerung speichern
-      </button>
-    </div>
   </div>
-</div>
 
+  <!-- ⏰ Erinnerung erstellen -->
+  <div class="row mt-4 justify-content-center">
+    <div class="col-md-6">
+      <div class="card shadow-sm p-4">
+        <h5 class="card-title text-center fs-3 mb-3">⏰ Erinnerung erstellen</h5>
 
+        <div class="mb-3">
+          <label class="form-label" for="taskSelect">Aufgabe</label>
+          <select
+            id="taskSelect"
+            class="form-select"
+            [(ngModel)]="selectedTask"
+            (change)="onTaskChange($event)"
+          >
+            <option value="" disabled selected>Bitte wählen</option>
+            <option value="Medication">💊 Medikament</option>
+            <option value="custom">📝 Eigene Aufgabe eingeben</option>
+          </select>
+        </div>
 
-<!-- 🔊 Sprach-Modal -->
-<div class="modal fade show d-block" tabindex="-1" role="dialog" *ngIf="showSpeechModal" style="background-color: rgba(0, 0, 0, 0.5);">
-  <div class="modal-dialog modal-dialog-centered" role="document">
-    <div class="modal-content text-center">
-      <div class="modal-header">
-        <h5 class="modal-title">🔊 Sprachausgabe</h5>
-        <button type="button" class="btn-close" aria-label="Close" (click)="closeSpeechModal()"></button>
-      </div>
-      <div class="modal-body">
-        <p class="fs-5">{{ speechText }}</p>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary w-100" (click)="closeSpeechModal()">Schließen</button>
+        <!-- Beschreibung für Medication oder custom -->
+        <div *ngIf="showCustomTaskField || selectedTask === 'Medication'" class="mb-3">
+          <label class="form-label" for="taskDescription">Beschreibung</label>
+          <input
+            id="taskDescription"
+            type="text"
+            class="form-control text-secondary"
+            placeholder="z. B. 1 Tablette nehmen"
+            [(ngModel)]="customTaskDescription"
+          />
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="timeInput">Uhrzeit</label>
+          <input
+            id="timeInput"
+            type="time"
+            class="form-control"
+            [(ngModel)]="selectedTime"
+          />
+        </div>
+
+        <button class="btn btn-primary w-100" (click)="saveReminder()">
+          Erinnerung speichern
+        </button>
       </div>
     </div>
   </div>
-</div>
+
+  <!-- 🔊 Sprach-Modal -->
+  <div class="modal fade show d-block"
+       tabindex="-1"
+       role="dialog"
+       *ngIf="showSpeechModal"
+       style="background-color: rgba(0, 0, 0, 0.5);">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content text-center">
+        <div class="modal-header">
+          <h5 class="modal-title">🔊 Sprachausgabe</h5>
+          <button type="button" class="btn-close" aria-label="Close" (click)="closeSpeechModal()"></button>
+        </div>
+        <div class="modal-body">
+          <p class="fs-5">{{ speechText }}</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary w-100" (click)="closeSpeechModal()">Schließen</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>

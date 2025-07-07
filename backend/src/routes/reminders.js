@@ -48,6 +48,29 @@ router.get('/', (req, res) => {
     });
 });
 
+// GET /api/reminders/today – Tagesplan für heute
+router.get('/today', (req, res) => {
+  const today = new Date().toISOString().split('T')[0];
+
+  db.all(`
+    SELECT 
+      r.id, r.text, r.time, r.date, r.done,
+      c.name AS category,
+      c.icon AS icon
+    FROM reminders r
+    LEFT JOIN categories c ON r.category_id = c.id
+    WHERE r.date = ?
+    ORDER BY r.time ASC
+  `, [today], (err, rows) => {
+    if (err) {
+      console.error('❌ Fehler beim Abrufen der heutigen Reminder:', err.message);
+      return res.status(500).json({ error: err.message });
+    }
+
+    res.json(rows);
+  });
+});
+
 // POST /api/reminders
 router.post('/', (req, res) => {
     const { text, time, date, category_id, repeat_rule_id } = req.body;

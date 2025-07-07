@@ -21,6 +21,16 @@ export class ReminderComponent implements OnInit, OnDestroy {
   editIndex: number | null = null;
   editedEntry: any = null;
 
+  // Neue Reminder-Daten
+  selectedTask = '';
+  selectedTime = '';
+  customTaskText = '';
+  customTaskDescription = '';
+  showCustomTaskField = false;
+  showDescriptionField = false;
+
+  categories: any[] = [];
+  dailySchedule: any[] = [];
 
   constructor(
     private http: HttpClient,
@@ -30,6 +40,8 @@ export class ReminderComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.checkReminder();
     this.setupWaterTracking();
+    this.loadCategories();
+    this.loadTodaysSchedule();
 
     const now = new Date();
     const msToNextMinute = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
@@ -45,6 +57,26 @@ export class ReminderComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     if (this.speakInterval) clearInterval(this.speakInterval);
     if (this.minuteInterval) clearInterval(this.minuteInterval);
+  }
+
+  loadTodaysSchedule() {
+    this.http.get<any[]>('/api/reminders/today').subscribe({
+      next: (data) => {
+        // Merke: ID, icon, category_id, repeat_rule_id mitnehmen!
+        this.dailySchedule = data.map(entry => ({
+          id: entry.id,
+          time: entry.time,
+          task: entry.text,
+          icon: entry.icon || '📋',
+          date: entry.date,
+          category_id: entry.category_id,
+          repeat_rule_id: entry.repeat_rule_id,
+        }));
+      },
+      error: (err) => {
+        console.error('❌ Fehler beim Laden des Tagesplans:', err);
+      }
+    });
   }
 
   checkReminder() {
@@ -89,37 +121,73 @@ export class ReminderComponent implements OnInit, OnDestroy {
     if (this.speakInterval) clearInterval(this.speakInterval);
   }
 
-  userName = 'Anna';
-  lastReminder = { time: '08:30', task: 'Took medication' };
-  dailySchedule = [
-    { time: '08:30', task: 'Medication', icon: '💊' },
-    { time: '10:00', task: 'Walk', icon: '🚶' },
-    { time: '17:30', task: 'Lunch', icon: '🍽️' }
-  ];
-  selectedTask = '';
-  selectedTime = '08:30';
-  customTaskText = '';
-  showCustomTaskField = false;
-
   onTaskChange(event: Event) {
     const value = (event.target as HTMLSelectElement).value;
-    this.showCustomTaskField = value === 'custom';
     this.selectedTask = value;
+    this.showCustomTaskField = value === 'custom';
+    this.showDescriptionField = value === 'custom' || value === 'Medication';
   }
 
   saveReminder() {
-    const task = this.selectedTask === 'custom' ? this.customTaskText : this.selectedTask;
+    const task =
+      this.selectedTask === 'custom'
+        ? this.customTaskDescription
+        : this.selectedTask === 'Medication'
+        ? `Medication: ${this.customTaskDescription}`
+        : this.selectedTask;
 
     if (!task || !this.selectedTime) {
       alert('Bitte Aufgabe und Uhrzeit eingeben.');
       return;
     }
 
-    alert(`Erinnerung gespeichert: ${task} um ${this.selectedTime}`);
+    const requestBody = {
+      text: task,
+      time: this.selectedTime,
+      date: new Date().toISOString().split('T')[0],
+      category_id: this.getCategoryIdForTask(this.selectedTask),
+      repeat_rule_id: 1,
+    };
+
+    this.http.post('/api/reminders', requestBody).subscribe({
+      next: (res) => {
+        alert(`Erinnerung gespeichert: ${task} um ${this.selectedTime}`);
+
+        this.selectedTask = '';
+        this.selectedTime = '';
+        this.customTaskText = '';
+        this.customTaskDescription = '';
+        this.showCustomTaskField = false;
+        this.showDescriptionField = false;
+        this.loadTodaysSchedule();
+      },
+      error: (err) => {
+        console.error('❌ Fehler beim Speichern des Reminders:', err);
+        alert('Fehler beim Speichern!');
+      },
+    });
+  }
+
+  getCategoryIdForTask(task: string): number | null {
+    switch (task) {
+      case 'Medication':
+        return 2; // 💊 Medikamente
+      case 'custom':
+        return 3; // 📋 Tägliche Aufgaben
+      default:
+        return null;
+    }
+  }
+
+  loadCategories() {
+    this.http.get<any[]>('/api/categories').subscribe({
+      next: (data) => this.categories = data,
+      error: (err) => console.error('❌ Fehler beim Laden der Kategorien:', err)
+    });
   }
 
   confirmDone(task: string) {
-    alert(`${task} marked as done!`);
+    alert(`${task} erledigt!`);
   }
 
   showSpeechModal = false;
@@ -137,7 +205,6 @@ export class ReminderComponent implements OnInit, OnDestroy {
     this.showSpeechModal = false;
   }
 
-  // 💧 Wasser-Tracking
   waterGoal: number | null = null;
   drunkWater = 0;
   waterId: number | null = null;
@@ -152,7 +219,6 @@ export class ReminderComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         if (err.status === 404) {
-          // Kein Eintrag: manuelle Eingabe erlauben
           this.waterId = null;
           this.waterGoal = null;
           this.drunkWater = 0;
@@ -171,7 +237,7 @@ export class ReminderComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.http.post<any>('http://localhost:3000/api/water', {
+    this.http.post<any>('/api/water', {
       date: today,
       target_amount: this.waterGoal
     }).subscribe({
@@ -188,7 +254,7 @@ export class ReminderComponent implements OnInit, OnDestroy {
   drinkWater() {
     if (!this.waterId || this.drunkWater >= (this.waterGoal || 0)) return;
 
-    this.http.put(`http://localhost:3000/api/water/${this.waterId}/add`, {}).subscribe({
+    this.http.put(`/api/water/${this.waterId}/add`, {}).subscribe({
       next: () => {
         this.drunkWater++;
       },
@@ -197,28 +263,53 @@ export class ReminderComponent implements OnInit, OnDestroy {
       }
     });
   }
-  // 🟩 Startet Bearbeitung für ausgewählten Eintrag
+
+  // === Bearbeiten (EDIT) ===
   editSchedule(index: number) {
     this.editIndex = index;
     this.editedEntry = { ...this.dailySchedule[index] };
   }
 
-// 🟩 Speichert Änderungen
   saveSchedule(index: number) {
-    this.dailySchedule[index] = { ...this.editedEntry };
-    this.cancelEdit();
+    const reminder = this.editedEntry;
+    this.http.put(`/api/reminders/${reminder.id}`, {
+      text: reminder.task,
+      time: reminder.time,
+      date: reminder.date,
+      category_id: reminder.category_id,
+      repeat_rule_id: reminder.repeat_rule_id,
+    }).subscribe({
+      next: (res) => {
+        this.dailySchedule[index] = { ...this.editedEntry };
+        this.cancelEdit();
+      },
+      error: (err) => {
+        alert('Fehler beim Aktualisieren!');
+        console.error('❌ Fehler beim Aktualisieren:', err);
+      }
+    });
   }
 
-// 🟩 Abbricht Bearbeiten
   cancelEdit() {
     this.editIndex = null;
     this.editedEntry = null;
   }
 
-// 🟩 Löscht einen Eintrag
+  // === Löschen ===
   deleteSchedule(index: number) {
-    this.dailySchedule.splice(index, 1);
-    if (this.editIndex === index) this.cancelEdit();
+    const reminder = this.dailySchedule[index];
+    if (!confirm('Wirklich löschen?')) return;
+
+    this.http.delete(`/api/reminders/${reminder.id}`).subscribe({
+      next: () => {
+        this.dailySchedule.splice(index, 1);
+        if (this.editIndex === index) this.cancelEdit();
+      },
+      error: (err) => {
+        alert('Fehler beim Löschen!');
+        console.error('❌ Fehler beim Löschen:', err);
+      }
+    });
   }
 
   protected readonly HTMLSelectElement = HTMLSelectElement;
