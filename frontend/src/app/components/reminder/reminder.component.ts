@@ -32,6 +32,14 @@ export class ReminderComponent implements OnInit, OnDestroy {
   categories: any[] = [];
   dailySchedule: any[] = [];
 
+  // Sprach-Popup
+  showSpeechModal = false;
+  speechText = '';
+
+  waterGoal: number | null = null;
+  drunkWater = 0;
+  waterId: number | null = null;
+
   constructor(
     private http: HttpClient,
     public speechService: SpeechService
@@ -43,6 +51,7 @@ export class ReminderComponent implements OnInit, OnDestroy {
     this.loadCategories();
     this.loadTodaysSchedule();
 
+    // Intervall für Reminder prüfen (jede Minute)
     const now = new Date();
     const msToNextMinute = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
 
@@ -62,7 +71,6 @@ export class ReminderComponent implements OnInit, OnDestroy {
   loadTodaysSchedule() {
     this.http.get<any[]>('/api/reminders/today').subscribe({
       next: (data) => {
-        // Merke: ID, icon, category_id, repeat_rule_id mitnehmen!
         this.dailySchedule = data.map(entry => ({
           id: entry.id,
           time: entry.time,
@@ -83,10 +91,11 @@ export class ReminderComponent implements OnInit, OnDestroy {
     this.http.get<any>('/api/reminders/next').subscribe({
       next: (data) => {
         const newKey = `${data.text}-${data.time}`;
-        if (newKey !== this.lastSpokenKey) {
+        if (newKey !== this.lastSpokenKey && !data.done) {
           this.reminder = { ...data, done: false };
           this.lastSpokenKey = newKey;
-          this.spokenCount = 0;
+          this.speechText = data.text;
+          this.showSpeechModal = true;
           this.startSpeaking();
         }
       },
@@ -97,13 +106,16 @@ export class ReminderComponent implements OnInit, OnDestroy {
   }
 
   startSpeaking() {
+    // Vorherigen Intervall abbrechen, falls noch aktiv
     if (this.speakInterval) clearInterval(this.speakInterval);
 
+    // Sofort vorlesen
     if (document.visibilityState === 'visible' && !this.reminder?.done) {
       this.speechService.speak(`Erinnerung: ${this.reminder.text}`);
     }
     this.spokenCount = 1;
 
+    // Alle 60 Sekunden, max. 3x insgesamt
     this.speakInterval = setInterval(() => {
       if (this.spokenCount < 3 && !this.reminder?.done) {
         if (document.visibilityState === 'visible') {
@@ -116,11 +128,110 @@ export class ReminderComponent implements OnInit, OnDestroy {
     }, 60_000);
   }
 
-  markAsDone() {
-    this.reminder.done = true;
-    if (this.speakInterval) clearInterval(this.speakInterval);
+  // --- Wasser Tracking ---
+  setupWaterTracking() {
+    const today = new Date().toISOString().split('T')[0];
+    this.http.get<any>(`/api/water/${today}`).subscribe({
+      next: (data) => {
+        this.waterId = data.id;
+        this.waterGoal = data.target_amount;
+        this.drunkWater = data.current_amount;
+      },
+      error: (err) => {
+        if (err.status === 404) {
+          this.waterId = null;
+          this.waterGoal = null;
+          this.drunkWater = 0;
+        } else {
+          console.error('❌ Fehler beim Wasserabruf:', err);
+        }
+      }
+    });
   }
 
+  createTodayWater() {
+    const today = new Date().toISOString().split('T')[0];
+
+    if (!this.waterGoal || this.waterGoal < 1 || this.waterGoal > 20) {
+      alert('Bitte gib ein Ziel zwischen 1 und 20 Gläsern ein.');
+      return;
+    }
+
+    this.http.post<any>('/api/water', {
+      date: today,
+      target_amount: this.waterGoal
+    }).subscribe({
+      next: (data) => {
+        this.waterId = data.id;
+        this.drunkWater = 0;
+      },
+      error: (err) => {
+        console.error('❌ Fehler beim Erstellen des Wasserziels:', err);
+      }
+    });
+  }
+
+  drinkWater() {
+    if (!this.waterId || this.drunkWater >= (this.waterGoal || 0)) return;
+
+    this.http.put(`/api/water/${this.waterId}/add`, {}).subscribe({
+      next: () => {
+        this.drunkWater++;
+      },
+      error: (err) => {
+        console.error('❌ Fehler beim Hinzufügen eines Glases:', err);
+      }
+    });
+  }
+
+  // --- Tagesplan Bearbeiten ---
+  editSchedule(index: number) {
+    this.editIndex = index;
+    this.editedEntry = { ...this.dailySchedule[index] };
+  }
+
+  saveSchedule(index: number) {
+    const reminder = this.editedEntry;
+    this.http.put(`/api/reminders/${reminder.id}`, {
+      text: reminder.task,
+      time: reminder.time,
+      date: reminder.date,
+      category_id: reminder.category_id,
+      repeat_rule_id: reminder.repeat_rule_id,
+    }).subscribe({
+      next: (res) => {
+        this.dailySchedule[index] = { ...this.editedEntry };
+        this.cancelEdit();
+      },
+      error: (err) => {
+        alert('Fehler beim Aktualisieren!');
+        console.error('❌ Fehler beim Aktualisieren:', err);
+      }
+    });
+  }
+
+  cancelEdit() {
+    this.editIndex = null;
+    this.editedEntry = null;
+  }
+
+  deleteSchedule(index: number) {
+    const reminder = this.dailySchedule[index];
+    if (!confirm('Wirklich löschen?')) return;
+
+    this.http.delete(`/api/reminders/${reminder.id}`).subscribe({
+      next: () => {
+        this.dailySchedule.splice(index, 1);
+        if (this.editIndex === index) this.cancelEdit();
+      },
+      error: (err) => {
+        alert('Fehler beim Löschen!');
+        console.error('❌ Fehler beim Löschen:', err);
+      }
+    });
+  }
+
+  // --- Reminder erstellen ---
   onTaskChange(event: Event) {
     const value = (event.target as HTMLSelectElement).value;
     this.selectedTask = value;
@@ -190,126 +301,31 @@ export class ReminderComponent implements OnInit, OnDestroy {
     alert(`${task} erledigt!`);
   }
 
-  showSpeechModal = false;
-  speechText = '';
-
-  openSpeechModal(text: string) {
-    this.speechText = text;
-    this.showSpeechModal = true;
-    if (document.visibilityState === 'visible') {
-      this.speechService.speak(`Erinnerung: ${text}`);
+  // --- Sprach-/Erinnerungspopup Methoden ---
+  markAsDoneFromModal() {
+    // Optional: als erledigt in der DB markieren!
+    if (this.reminder?.id) {
+      this.http.post(`/api/reminders/${this.reminder.id}/done`, {}).subscribe({
+        next: () => {
+          this.reminder.done = true;
+          this.showSpeechModal = false;
+          if (this.speakInterval) clearInterval(this.speakInterval);
+        },
+        error: (err) => {
+          this.showSpeechModal = false;
+          if (this.speakInterval) clearInterval(this.speakInterval);
+        }
+      });
+    } else {
+      this.reminder.done = true;
+      this.showSpeechModal = false;
+      if (this.speakInterval) clearInterval(this.speakInterval);
     }
   }
 
   closeSpeechModal() {
     this.showSpeechModal = false;
-  }
-
-  waterGoal: number | null = null;
-  drunkWater = 0;
-  waterId: number | null = null;
-
-  setupWaterTracking() {
-    const today = new Date().toISOString().split('T')[0];
-    this.http.get<any>(`/api/water/${today}`).subscribe({
-      next: (data) => {
-        this.waterId = data.id;
-        this.waterGoal = data.target_amount;
-        this.drunkWater = data.current_amount;
-      },
-      error: (err) => {
-        if (err.status === 404) {
-          this.waterId = null;
-          this.waterGoal = null;
-          this.drunkWater = 0;
-        } else {
-          console.error('❌ Fehler beim Wasserabruf:', err);
-        }
-      }
-    });
-  }
-
-  createTodayWater() {
-    const today = new Date().toISOString().split('T')[0];
-
-    if (!this.waterGoal || this.waterGoal < 1 || this.waterGoal > 20) {
-      alert('Bitte gib ein Ziel zwischen 1 und 20 Gläsern ein.');
-      return;
-    }
-
-    this.http.post<any>('/api/water', {
-      date: today,
-      target_amount: this.waterGoal
-    }).subscribe({
-      next: (data) => {
-        this.waterId = data.id;
-        this.drunkWater = 0;
-      },
-      error: (err) => {
-        console.error('❌ Fehler beim Erstellen des Wasserziels:', err);
-      }
-    });
-  }
-
-  drinkWater() {
-    if (!this.waterId || this.drunkWater >= (this.waterGoal || 0)) return;
-
-    this.http.put(`/api/water/${this.waterId}/add`, {}).subscribe({
-      next: () => {
-        this.drunkWater++;
-      },
-      error: (err) => {
-        console.error('❌ Fehler beim Hinzufügen eines Glases:', err);
-      }
-    });
-  }
-
-  // === Bearbeiten (EDIT) ===
-  editSchedule(index: number) {
-    this.editIndex = index;
-    this.editedEntry = { ...this.dailySchedule[index] };
-  }
-
-  saveSchedule(index: number) {
-    const reminder = this.editedEntry;
-    this.http.put(`/api/reminders/${reminder.id}`, {
-      text: reminder.task,
-      time: reminder.time,
-      date: reminder.date,
-      category_id: reminder.category_id,
-      repeat_rule_id: reminder.repeat_rule_id,
-    }).subscribe({
-      next: (res) => {
-        this.dailySchedule[index] = { ...this.editedEntry };
-        this.cancelEdit();
-      },
-      error: (err) => {
-        alert('Fehler beim Aktualisieren!');
-        console.error('❌ Fehler beim Aktualisieren:', err);
-      }
-    });
-  }
-
-  cancelEdit() {
-    this.editIndex = null;
-    this.editedEntry = null;
-  }
-
-  // === Löschen ===
-  deleteSchedule(index: number) {
-    const reminder = this.dailySchedule[index];
-    if (!confirm('Wirklich löschen?')) return;
-
-    this.http.delete(`/api/reminders/${reminder.id}`).subscribe({
-      next: () => {
-        this.dailySchedule.splice(index, 1);
-        if (this.editIndex === index) this.cancelEdit();
-      },
-      error: (err) => {
-        alert('Fehler beim Löschen!');
-        console.error('❌ Fehler beim Löschen:', err);
-      }
-    });
+    if (this.speakInterval) clearInterval(this.speakInterval);
   }
 
   protected readonly HTMLSelectElement = HTMLSelectElement;

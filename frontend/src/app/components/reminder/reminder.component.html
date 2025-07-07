@@ -3,21 +3,10 @@
     🧠 ReminderMe Übersicht
   </h2>
 
-  <div class="row g-4 justify-content-center">
-    <!-- 💊 Medikament -->
-    <div class="col-md-4">
-      <div class="card h-100 text-center p-3 shadow-sm">
-        <h5 class="card-title fs-3 mb-3">💊 Medikament</h5>
-        <p class="fs-5">Anna, bitte nimm dein Medikament.</p>
-        <button class="btn btn-warning btn-lg w-100 mb-2" (click)="confirmDone('Medication')">✅ Erledigt</button>
-        <button class="btn btn-outline-secondary mt-3 w-100" (click)="openSpeechModal('Bitte nimm dein Medikament')">
-          🔊 Vorlesen
-        </button>
-      </div>
-    </div>
-
+  <!-- Karten in einer Zeile nebeneinander -->
+  <div class="row g-4 justify-content-center mb-4">
     <!-- 🚰 Wasser-Tracking -->
-    <div class="col-md-4">
+    <div class="col-md-5">
       <div class="card h-100 text-center p-3 shadow-sm">
         <h5 class="card-title fs-3 mb-3">🚰 Wasser trinken</h5>
         <div *ngIf="!waterId">
@@ -40,7 +29,7 @@
     </div>
 
     <!-- 🗓️ Tagesplan -->
-    <div class="col-md-4">
+    <div class="col-md-5">
       <div class="card h-100 p-3 shadow-sm">
         <h5 class="card-title text-center fs-3 mb-3">🗓️ Tagesplan</h5>
         <table class="table table-bordered table-hover align-middle text-center">
@@ -142,7 +131,7 @@
     </div>
   </div>
 
-  <!-- 🔊 Sprach-Modal -->
+  <!-- 🔔 Automatisches Erinnerung-Popup (Sprachausgabe) -->
   <div class="modal fade show d-block"
        tabindex="-1"
        role="dialog"
@@ -151,13 +140,14 @@
     <div class="modal-dialog modal-dialog-centered" role="document">
       <div class="modal-content text-center">
         <div class="modal-header">
-          <h5 class="modal-title">🔊 Sprachausgabe</h5>
+          <h5 class="modal-title">🔔 Erinnerung</h5>
           <button type="button" class="btn-close" aria-label="Close" (click)="closeSpeechModal()"></button>
         </div>
         <div class="modal-body">
           <p class="fs-5">{{ speechText }}</p>
         </div>
-        <div class="modal-footer">
+        <div class="modal-footer flex-column gap-2">
+          <button class="btn btn-success w-100" (click)="markAsDoneFromModal()">✅ Erledigt</button>
           <button class="btn btn-secondary w-100" (click)="closeSpeechModal()">Schließen</button>
         </div>
       </div>

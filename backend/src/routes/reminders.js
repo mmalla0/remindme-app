@@ -71,6 +71,21 @@ router.get('/today', (req, res) => {
   });
 });
 
+
+// POST /api/reminders/:id/done
+router.post('/:id/done', (req, res) => {
+  const { id } = req.params;
+  db.run(`UPDATE reminders SET done = 1 WHERE id = ?`, [id], function (err) {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    if (this.changes === 0) {
+      return res.status(404).json({ message: 'Reminder nicht gefunden.' });
+    }
+    res.json({ message: 'Reminder als erledigt markiert.' });
+  });
+});
+
 // POST /api/reminders
 router.post('/', (req, res) => {
     const { text, time, date, category_id, repeat_rule_id } = req.body;
@@ -132,6 +147,8 @@ router.put('/:id', (req, res) => {
         res.json({ message: 'Reminder aktualisiert.' });
     });
 });
+
+
 
 // DELETE /api/reminders/:id
 router.delete('/:id', (req, res) => {
