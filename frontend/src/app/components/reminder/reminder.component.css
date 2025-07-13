@@ -73,3 +73,20 @@ td span[style*="font-size"] {
   line-height: 1;
 }
 
+input[type="date"]::-webkit-calendar-picker-indicator {
+  zoom: 1.8; /* Skaliert den Datepicker */
+}
+
+ngb-datepicker {
+  font-size: 1.6rem !important; /* Schrift im Kalender */
+}
+
+ngb-datepicker .ngb-dp-day,
+ngb-datepicker .ngb-dp-weekday,
+ngb-datepicker .ngb-dp-month-name {
+  padding: 1rem !important; /* Zellenabstand */
+  width: 3.5rem !important;
+  height: 3.5rem !important;
+  text-align: center;
+}
+

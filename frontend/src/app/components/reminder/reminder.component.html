@@ -124,6 +124,32 @@
           />
         </div>
 
+        <div class="mb-3">
+          <label class="form-label fs-5" for="dateInput">📅 Datum</label>
+          <input
+            id="dateInput"
+            type="date"
+            class="form-control form-control-lg"
+            [(ngModel)]="selectedDate"
+            style="font-size: 1.4rem; padding: 0.75rem;"
+          />
+        </div>
+
+        <!-- 🔁 Wiederholung -->
+        <div class="mb-3">
+          <label class="form-label">Wiederholen</label>
+          <select class="form-select" [(ngModel)]="selectedRepeat">
+            <option [value]="1">🔂 Einmalig</option>
+            <option [value]="2">🔁 Täglich</option>
+            <option [value]="3">🔁 Eine Woche</option>
+            <option [value]="5">📅 Eine Jahr</option>
+            <option [value]="4">📅 Eine Monat</option>
+            <!-- Weitere Optionen bei Bedarf -->
+          </select>
+        </div>
+
+
+
         <button class="btn btn-primary w-100" (click)="saveReminder()">
           Erinnerung speichern
         </button>

@@ -1,8 +1,9 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import {Component, OnInit, OnDestroy, NgModule} from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { SpeechService } from '../../services/speech.service';
 import { FormsModule } from '@angular/forms';
+
 
 @Component({
   selector: 'app-reminder',
@@ -12,6 +13,7 @@ import { FormsModule } from '@angular/forms';
   templateUrl: './reminder.component.html',
   styleUrls: ['./reminder.component.css']
 })
+
 export class ReminderComponent implements OnInit, OnDestroy {
   reminder: any = null;
   lastSpokenKey = '';
@@ -239,45 +241,96 @@ export class ReminderComponent implements OnInit, OnDestroy {
     this.showDescriptionField = value === 'custom' || value === 'Medication';
   }
 
+  // NEU: Wiederholungsoptionen
+  selectedDate = '';
+  selectedRepeat = 1;
+
+// ... bestehender Code bleibt gleich ...
+
   saveReminder() {
+    const repeatRuleId = Number(this.selectedRepeat);
     const task =
       this.selectedTask === 'custom'
         ? this.customTaskDescription
         : this.selectedTask === 'Medication'
-        ? `Medication: ${this.customTaskDescription}`
-        : this.selectedTask;
+          ? `Medication: ${this.customTaskDescription}`
+          : this.selectedTask;
 
     if (!task || !this.selectedTime) {
       alert('Bitte Aufgabe und Uhrzeit eingeben.');
       return;
     }
 
+    const startDate = new Date(this.selectedDate || new Date());
+    const formattedDate = startDate.toISOString().split('T')[0];
+    let repeatUntil: string | null = null;
+
+    switch (repeatRuleId) {
+      case 3: // wöchentlich
+        const oneWeekLater = new Date(startDate);
+        oneWeekLater.setDate(oneWeekLater.getDate() + 7);
+        repeatUntil = oneWeekLater.toISOString().split('T')[0];
+        break;
+
+      case 4: // monatlich
+        const oneMonthLater = new Date(startDate);
+        oneMonthLater.setMonth(oneMonthLater.getMonth() + 1);
+        repeatUntil = oneMonthLater.toISOString().split('T')[0];
+        break;
+
+      case 5: // jährlich
+        const oneYearLater = new Date(startDate);
+        oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
+        repeatUntil = oneYearLater.toISOString().split('T')[0];
+        break;
+
+      // Fall 1 (einmalig) und 2 (täglich): repeat_until bleibt NULL
+    }
+
     const requestBody = {
       text: task,
       time: this.selectedTime,
-      date: new Date().toISOString().split('T')[0],
+      date: formattedDate,
       category_id: this.getCategoryIdForTask(this.selectedTask),
-      repeat_rule_id: 1,
+      repeat_rule_id: repeatRuleId,
+      repeat_until: repeatUntil
     };
 
     this.http.post('/api/reminders', requestBody).subscribe({
-      next: (res) => {
-        alert(`Erinnerung gespeichert: ${task} um ${this.selectedTime}`);
-
-        this.selectedTask = '';
-        this.selectedTime = '';
-        this.customTaskText = '';
-        this.customTaskDescription = '';
-        this.showCustomTaskField = false;
-        this.showDescriptionField = false;
+      next: () => {
+        alert(`Erinnerung gespeichert: ${task} am ${formattedDate} um ${this.selectedTime}`);
+        this.resetForm();
         this.loadTodaysSchedule();
       },
       error: (err) => {
         console.error('❌ Fehler beim Speichern des Reminders:', err);
         alert('Fehler beim Speichern!');
-      },
+      }
     });
   }
+
+  resetForm() {
+    this.selectedTask = '';
+    this.selectedTime = '';
+    this.selectedDate = '';
+    this.selectedRepeat = 1;
+    this.customTaskText = '';
+    this.customTaskDescription = '';
+    this.showCustomTaskField = false;
+    this.showDescriptionField = false;
+  }
+
+ /* resetForm() {
+    this.selectedTask = '';
+    this.selectedTime = '';
+    this.selectedDate = '';
+    this.selectedRepeat = 1;
+    this.customTaskText = '';
+    this.customTaskDescription = '';
+    this.showCustomTaskField = false;
+    this.showDescriptionField = false;
+  }
+*/
 
   getCategoryIdForTask(task: string): number | null {
     switch (task) {
@@ -327,6 +380,7 @@ export class ReminderComponent implements OnInit, OnDestroy {
     this.showSpeechModal = false;
     if (this.speakInterval) clearInterval(this.speakInterval);
   }
+
 
   protected readonly HTMLSelectElement = HTMLSelectElement;
 }

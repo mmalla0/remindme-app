@@ -60,7 +60,7 @@ db.serialize(() => {
         } else {
             console.log('🔁 Tabelle "repeat_rules" wurde überprüft oder erstellt.');
 
-            const defaultRepeatRules = ['none', 'daily', 'weekly'];
+            const defaultRepeatRules = ['none', 'daily', 'weekly', 'yearly'];
 
             defaultRepeatRules.forEach(rule => {
                 db.run(`
